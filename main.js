@@ -11,6 +11,23 @@ class MyRobot extends BCAbstractRobot {
         // Calculates centroid of initial map
         this.log("Centroid: " + [centroid_arr(calc_x_grid(this.orbs_map),0),centroid_arr(calc_y_grid(this.orbs_map),0)]);
         */
+        var arr1 = calc_x_grid(this.orbs_map);
+        var arr3 = calc_y_grid(this.orbs_map);
+         var arr2 = partioner(3,arr1,arr1.reduce(getSum)/3);
+         var arr4 = partioner(3,arr3,arr3.reduce(getSum)/3);
+        // this.log(arr2); // Test x sum functionality
+        var summer = 0;
+        var summer1 = 0;
+        this.log("Sum 1: " + arr2[0].reduce(getSum));
+        this.log("Centroid 1: " + [centroid_arr(arr2[0], summer), centroid_arr(arr4[0], summer1)]);
+        summer = summer + arr2[0].length;
+        summer1 = summer1 + arr4[0].length;
+        this.log("Sum 2: " + arr2[1].reduce(getSum));
+        this.log("Centroid 2: " + [centroid_arr(arr2[1], summer), centroid_arr(arr4[1], summer1)]);
+        summer = summer + arr2[1].length;
+        summer1 = summer1 + arr4[1].length;
+        this.log("Sum 2: " + arr2[2].reduce(getSum));
+        this.log("Centroid 2: " + [centroid_arr(arr2[2], summer), centroid_arr(arr4[2], summer1)]);
         if (this.me.unit === SPECS.VOYAGER) {
             /* Choices
             0: Move Left
@@ -22,14 +39,19 @@ class MyRobot extends BCAbstractRobot {
             var my_pos = [this.me.r, this.me.c];
             var first_centroid = [centroid_arr(calc_y_grid(this.orbs_map),0),centroid_arr(calc_x_grid(this.orbs_map),0)];
 
-            this.log("Begin: " + my_pos);
-            this.log("End: " + first_centroid);
+            // this.log("Begin: " + my_pos);
+            // this.log("End: " + first_centroid);
             var newMap = this.map.map(function(arr) {
                 return arr.slice();
             });
-            this.log("Shortest Path: " + findShortestPath(my_pos, first_centroid, newMap));
-            newMap[my_pos[0]][my_pos[1]] = 'START';
-            this.log(newMap);
+
+            var movY = findShortestPath(my_pos, first_centroid, newMap)[0][1];
+            var movX = findShortestPath(my_pos, first_centroid, newMap)[2];
+            //var movX = findShortestPath(my_pos, first_centroid, newMap)[0][1];
+            // this.log("Move Y" + movY);
+            // this.log("Move X" + movX);
+            return this.move(movY,movX);
+
 
         }
 
@@ -62,9 +84,10 @@ var findShortestPath = function(startCoordinates, endCoord, grid) {
 
   // Initialize the queue with the start location already inside
   var queue = [location];
-
+  var it = 0;
   // Loop through the grid searching for the goal
   while (queue.length > 0) {
+    it += 1;
     // Take the first location off the queue
     var currentLocation = queue.shift();
 
@@ -73,7 +96,6 @@ var findShortestPath = function(startCoordinates, endCoord, grid) {
     if (newLocation.status == 'Goal') {
       return newLocation.path;
     } else if (newLocation.status == 'Valid') {
-      grid[0][0] = queue;
       queue.push(newLocation);
     }
 
@@ -124,7 +146,7 @@ var locationStatus = function(location, endCoord, grid) {
 
     // location is not on the grid--return false
     return 'Invalid';
-  } else if ([dft, dfl] == endCoord) {
+  } else if (dft == endCoord[0] && dfl == endCoord[1]) {
     return 'Goal';
   } else if (grid[dft][dfl] == false || grid[dft][dfl] == 'Visited') {
     // location is either an obstacle or has been visited
@@ -144,13 +166,13 @@ var exploreInDirection = function(currentLocation, endCoord, direction, grid) {
   var dft = currentLocation.distanceFromTop;
   var dfl = currentLocation.distanceFromLeft;
 
-  if (direction == [1, 0]) {
+  if (direction[0] == 1 && direction[1] == 0) {
     dft -= 1;
-  } else if (direction == [0,1]) {
+  } else if (direction[0] == 0 && direction[1] == 1) {
     dfl += 1;
-  } else if (direction == [-1, 0]) {
+  } else if (direction[0] == -1 && direction[1] == 0) {
     dft += 1;
-  } else if (direction == [0,-1]) {
+  } else if (direction[0] == 0 && direction[1] == -1) {
     dfl -= 1;
   }
 
@@ -180,17 +202,15 @@ function man_distance(a, b) {
 
 // Calculate sum of each row to output a y value array
 function calc_y_grid(ob_map) {
-    function add(accumulator, a) {
-        return accumulator + a;
+var sum_x = [];
+    for (i = 0; i < ob_map.length; i++) {
+        var sum = 0;
+        for (j = 0; j < ob_map.length; j++) {
+            sum = sum + ob_map[i][j];
+        }
+        sum_x.push(sum);
     }
-
-    var sum_y = [];
-    for (let r of ob_map) {
-        sum_y.push(r.reduce(add));
-    }
-
-
-    return sum_y;
+    return sum_x;
 }
 
 // Calculate sum of each column to output a x value array
@@ -213,6 +233,42 @@ function calc_x_grid(ob_map) {
 
     returns: Position of centroid of 1d array
 */
+
+function partioner(numVoyages, arr, mid) {
+    var b = 0;
+    var a = [];
+    var sum = 0;
+    var newarr = [];
+    for (i = 0; i < arr.length; i++) {
+        if ((sum + arr[i]) <= mid) {
+            sum += arr[i];
+            newarr.push(arr[i]); 
+        } else {
+            // console.log(newarr);
+            a.push(newarr);
+            newarr = [];
+            b++;
+            newarr.push(arr[i]);
+            sum = arr[i];
+        }
+    }
+    if (newarr != []) {
+        // console.log(newarr);
+        a.push(newarr);
+        b++
+    }
+    if (b < numVoyages) {
+        return partioner(numVoyages, arr, mid - 1);
+    }
+    if (b > numVoyages) {
+        return partioner(numVoyages, arr, mid + 1);
+    }
+    return a;
+}
+function getSum(total, num) {
+  return total + num;
+}
+
 function centroid_arr(arr, pos) {
     var cent = 0;
     var sum = 0;
@@ -221,9 +277,9 @@ function centroid_arr(arr, pos) {
         cent += (i+1) * arr[i];
         sum += arr[i];
     }
+
     return Math.round(cent / sum + pos);
 }
 
 
 var robot = new MyRobot();
-
